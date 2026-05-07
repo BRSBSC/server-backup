@@ -51,7 +51,7 @@ services:
 
 ```bash
 # 1. 克隆到目标位置
-sudo git clone https://github.com/<你的用户名>/server-backup.git /server-backup
+sudo git clone https://github.com/BRSBSC/server-backup.git /server-backup
 cd /server-backup
 
 # 2. 创建并填写真实配置
