@@ -109,7 +109,7 @@ echo "📄 配置文件: ${CONFIG_FILE}"
 if [ "$PG_DUMP_ENABLED" = "true" ]; then
     echo "[1/5] PostgreSQL Dump..."
     : "${PG_CONTAINER:?PG_DUMP_ENABLED=true 时必须设置 PG_CONTAINER}"
-    PG_USER="${PG_USER:-postgres}"
+    PG_USER="${PG_USER:-}"   # 留空则使用容器内的 POSTGRES_USER
     PG_DUMP_PATH="${PG_DUMP_PATH:-/opt/db_dump}"
     PG_DUMP_KEEP_DAYS="${PG_DUMP_KEEP_DAYS:-7}"
 
@@ -123,15 +123,26 @@ if [ "$PG_DUMP_ENABLED" = "true" ]; then
     fi
 
     echo -n "   -> dump → ${PG_DUMP_FILE} ... "
+    PG_DUMP_ERR="${WORK_DIR}/pg_dump.err"
+
+    # 复用容器内的 POSTGRES_USER + POSTGRES_PASSWORD; PG_USER 非空时覆盖用户名
     set +e
-    docker exec "$PG_CONTAINER" pg_dumpall -U "$PG_USER" 2>/dev/null | gzip > "$PG_DUMP_FILE"
+    docker exec -e "PG_USER_OVERRIDE=${PG_USER}" "$PG_CONTAINER" \
+        sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dumpall -U "${PG_USER_OVERRIDE:-$POSTGRES_USER}"' \
+        2>"$PG_DUMP_ERR" \
+        | gzip > "$PG_DUMP_FILE"
     PG_PIPE_STATUS=("${PIPESTATUS[@]}")
     set -e
 
     if [ "${PG_PIPE_STATUS[0]}" -ne 0 ] || [ "${PG_PIPE_STATUS[1]}" -ne 0 ]; then
         echo "❌"
         rm -f "$PG_DUMP_FILE"
-        echo "❌ pg_dumpall 失败 (状态: ${PG_PIPE_STATUS[*]})"
+        if [ -s "$PG_DUMP_ERR" ]; then
+            echo "❌ pg_dumpall 错误信息:"
+            sed 's/^/    /' "$PG_DUMP_ERR"
+        else
+            echo "❌ pg_dumpall 失败 (状态: ${PG_PIPE_STATUS[*]})"
+        fi
         exit 1
     fi
 

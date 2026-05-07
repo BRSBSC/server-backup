@@ -1,0 +1,24 @@
+# 真实配置 (含 Telegram TOKEN 等敏感信息), 不要进版本库
+backup.env
+
+# 备份运行时产生的临时/失败目录
+temp_*/
+failed_*/
+
+# 日志
+*.log
+log/
+
+# 数据库 dump 落地副本
+db_dump/
+*.sql
+*.sql.gz
+
+# 编辑器/系统垃圾
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
